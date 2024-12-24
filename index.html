@@ -337,7 +337,7 @@
       for (let p of ports) {
         logElem.textContent += `Knocking port ${p}...\n`;
         try {
-          await timedFetch(`http://${ip}:${p}`, { method: 'GET', mode: 'no-cors' }, 1000);
+          await timedFetch(`https://${ip}:${p}`, { method: 'GET', mode: 'no-cors' }, 1000);
         } catch (error) {
           // 敲門失敗或超時，不論
         }
@@ -347,7 +347,7 @@
       if (checkPublicPort && publicPort) {
         logElem.textContent += `\nChecking Public Port ${publicPort}...\n`;
         try {
-          await timedFetch(`http://${ip}:${publicPort}`, { method: 'GET', mode: 'no-cors' }, 1000);
+          await timedFetch(`https://${ip}:${publicPort}`, { method: 'GET', mode: 'no-cors' }, 1000);
           logElem.textContent += `Public Port ${publicPort} - request sent (no immediate error)\n`;
         } catch (err) {
           logElem.textContent += `Public Port ${publicPort} check failed or timed out.\n`;
