@@ -318,19 +318,33 @@
    *  - 為了省去 CORS 問題與回應內容，我們使用 { mode: 'no-cors' }，只要送出 request 即可。
    *  - 人工 Timeout 防止連線卡太久。
    */
-  function timedFetch(url, options = {}, timeoutMs = 1500) {
+  function timedFetch(url, options = {}, timeoutMs = 3000) { // 將 timeout 增加到 3000 ms
     const controller = new AbortController();
     const signal = controller.signal;
     const fetchPromise = fetch(url, { ...options, signal });
 
     const timeoutId = setTimeout(() => {
       controller.abort();
+      console.log(`Fetch to ${url} timed out after ${timeoutMs}ms`);
     }, timeoutMs);
 
-    return fetchPromise.finally(() => clearTimeout(timeoutId));
+    return fetchPromise
+      .then(response => {
+        console.log(`Fetch to ${url} succeeded`);
+        return response;
+      })
+      .catch(error => {
+        if (error.name === 'AbortError') {
+          console.log(`Fetch to ${url} aborted due to timeout`);
+        } else {
+          console.log(`Fetch to ${url} failed: ${error}`);
+        }
+        throw error;
+      })
+      .finally(() => clearTimeout(timeoutId));
   }
 
-  async function knockPorts(ip, firstPort, totpKey, publicPort, checkPublicPort) {
+  async function knockPorts(ip, firstPort, totpKey, publicPort, checkPublicPort, protocol) {
     const logElem = document.getElementById('log');
     logElem.textContent = ""; // 清空上一輪結果
 
@@ -350,18 +364,17 @@
       for (let p of ports) {
         logElem.textContent += `Knocking port ${p}...\n`;
         try {
-          await timedFetch(`https://${ip}:${p}`, { method: 'GET', mode: 'no-cors' }, 1000);
+          await timedFetch(`https://${ip}:${p}`, { method: 'GET', mode: 'no-cors' }, 3000); // 增加超時時間
         } catch (error) {
-          // 敲門失敗或超時，不論
+          logElem.textContent += `Knocking port ${p} failed or timed out.\n`;
         }
       }
 
       // 4. 若使用者有勾選「Enable Public Port」，檢查 Public Port
       if (checkPublicPort && publicPort) {
-        const protocol = document.getElementById('publicPortProtocol').value;
         logElem.textContent += `\nChecking Public Port ${publicPort} with protocol ${protocol}...\n`;
         try {
-          await timedFetch(`${protocol}://${ip}:${publicPort}`, { method: 'GET', mode: 'no-cors' }, 5000);
+          await timedFetch(`${protocol}://${ip}:${publicPort}`, { method: 'GET', mode: 'no-cors' }, 3000); // 增加超時時間
           logElem.textContent += `Public Port ${publicPort} - request sent (no immediate error)\n`;
         } catch (err) {
           logElem.textContent += `Public Port ${publicPort} check failed or timed out.\n`;
@@ -387,14 +400,15 @@
     return JSON.parse(raw);
   }
 
-  function saveService(serviceName, ip, knock, totpKey, publicPort, checkPub) {
+  function saveService(serviceName, ip, knock, totpKey, publicPort, checkPub, protocol) {
     const services = getAllServices();
     services[serviceName] = {
       ip,
       knock,
       totpKey,
       publicPort,
-      checkPub
+      checkPub,
+      protocol
     };
     localStorage.setItem('portKnockingServices', JSON.stringify(services));
   }
@@ -511,11 +525,11 @@
       }
 
       // 儲存到 localStorage
-      saveService(serviceName, srvip, knock, totpKey, pubCheck ? publicPort : null, pubCheck);
+      saveService(serviceName, srvip, knock, totpKey, pubCheck ? publicPort : null, pubCheck, protocol);
       // 更新下拉選單
       refreshServiceSelect();
       // 敲門
-      knockPorts(srvip, knock, totpKey, pubCheck ? publicPort : null, pubCheck);
+      knockPorts(srvip, knock, totpKey, pubCheck ? publicPort : null, pubCheck, protocol);
     });
 
     // 綁定「Delete Service」按鈕
