@@ -358,25 +358,7 @@
 
       // 4. 若使用者有勾選「Enable Public Port」，檢查 Public Port
       if (checkPublicPort && publicPort) {
-        // 自動偵測當前頁面的協議
-        const siteProtocol = window.location.protocol; // "http:" 或 "https:"
-        let protocol = "http";
-        if (siteProtocol === "https:") {
-          protocol = "https";
-        } else {
-          protocol = "http";
-        }
-
-        // 如果用戶選擇了不同的協議，可以選擇優先用戶選擇的
-        const userSelectedProtocol = document.getElementById('publicPortProtocol').value;
-        // 若站點是 HTTPS，強制公共端口也使用 HTTPS
-        if (siteProtocol === "https:" && userSelectedProtocol !== "https") {
-          protocol = "https";
-          logElem.textContent += `\nNote: Site is served over HTTPS. Forcing Public Port Protocol to HTTPS.\n`;
-        } else {
-          protocol = userSelectedProtocol;
-        }
-
+        const protocol = document.getElementById('publicPortProtocol').value;
         logElem.textContent += `\nChecking Public Port ${publicPort} with protocol ${protocol}...\n`;
         try {
           await timedFetch(`${protocol}://${ip}:${publicPort}`, { method: 'GET', mode: 'no-cors' }, 1000);
