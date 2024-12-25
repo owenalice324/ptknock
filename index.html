@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>DrayTek_PortKnockingTool_V1.0</title>
+  <title>DrayTek PortKnockingTool V1.0</title>
   <!-- 引入 Google Fonts (Noto Sans TC) 讓整體字型更美觀 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -154,7 +154,7 @@
 </head>
 <body>
   <div id="container">
-    <h3>DrayTek_PortKnockingTool_V1.0</h3>
+    <h3>DrayTek PortKnockingTool V1.0</h3>
 
     <table class="form-table">
       <tr>
@@ -324,7 +324,7 @@
         }
       }
 
-      logElem.textContent += "\nDone! Check server.\n";
+      logElem.textContent += "\nPorts knocking successfully. Please check the server for confirmation.\n";
     } catch (err) {
       logElem.textContent += `TOTP calculation failed: ${err}\n`;
     }
@@ -422,11 +422,11 @@
       const totpKey = document.getElementById('totpKey').value.trim();
 
       if (!serviceName) {
-        alert("請輸入 Service!");
+        alert("Please enter the Service!");
         return;
       }
       if (!srvip || isNaN(knock) || !totpKey) {
-        alert("請確定 IP / 1st Port / TOTP Key 均已填寫正確！");
+        alert("Please ensure IP / 1st Port / TOTP Key are correctly filled!");
         return;
       }
 
@@ -442,7 +442,7 @@
     document.getElementById('deleteBtn').addEventListener('click', () => {
       const serviceName = document.getElementById('serviceName').value.trim();
       if (!serviceName) {
-        alert("請輸入或選擇要刪除的 Service！");
+        alert("Please enter or select the Service to delete!");
         return;
       }
 
@@ -456,7 +456,7 @@
       document.getElementById('totpKey').value = "";
       // Knock Protocol 已移除
 
-      alert(`Service '${serviceName}' 已刪除。`);
+      alert(`Service '${serviceName}' has been deleted.`);
     });
   });
   </script>
