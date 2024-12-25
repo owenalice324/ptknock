@@ -304,7 +304,7 @@
       // 1. 先在前端自行計算 6 位數 TOTP
       const tokenStr = await generateTOTP(totpKey);
       const token = parseInt(tokenStr, 10);
-      logElem.textContent += `TOTP generated (frontend): ${tokenStr}\n`;
+      logElem.textContent += `TOTP generated: ${tokenStr}\n`;
 
       // 2. 計算 knock2, knock3
       const knock2 = 1000 + Math.floor(token / 1000);
