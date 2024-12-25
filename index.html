@@ -198,6 +198,15 @@
           </label>
         </td>
       </tr>
+      <tr id="protocolRow" style="display: none;">
+        <td colspan="2">
+          <label>Public Port Protocol:</label>
+          <select id="publicPortProtocol">
+            <option value="http">HTTP</option>
+            <option value="https">HTTPS</option>
+          </select>
+        </td>
+      </tr>
       <tr>
         <td colspan="2">
           <label>TOTP Key:</label>
@@ -287,13 +296,17 @@
   function togglePublicPort() {
     const check = document.getElementById('publicPortCheck').checked;
     const pubPortInput = document.getElementById('publicPort');
+    const protocolRow = document.getElementById('protocolRow');
     if (check) {
       pubPortInput.disabled = false;
       pubPortInput.style.backgroundColor = "";
+      protocolRow.style.display = "table-row";
     } else {
       pubPortInput.disabled = true;
       pubPortInput.style.backgroundColor = "#e9e9e9";
       pubPortInput.value = "";
+      document.getElementById('publicPortProtocol').value = "http";
+      protocolRow.style.display = "none";
     }
   }
 
@@ -345,12 +358,13 @@
 
       // 4. 若使用者有勾選「Enable Public Port」，檢查 Public Port
       if (checkPublicPort && publicPort) {
-        logElem.textContent += `\nChecking Public Port ${publicPort}...\n`;
+        const protocol = document.getElementById('publicPortProtocol').value;
+        logElem.textContent += `\nChecking Public Port ${publicPort} with protocol ${protocol}...\n`;
         try {
-          await timedFetch(`https://${ip}:${publicPort}`, { method: 'GET', mode: 'no-cors' }, 1000);
-          logElem.textContent += `Public Port ${publicPort} - request sent (no immediate error)\n`;
+          await timedFetch(`${protocol}://${ip}:${publicPort}`, { method: 'GET', mode: 'no-cors' }, 1000);
+          logElem.textContent += `Public Port ${publicPort} check open!\n`;
         } catch (err) {
-          logElem.textContent += `Public Port ${publicPort} check failed or timed out.\n`;
+          logElem.textContent += `Public Port ${publicPort} check failed\n`;
         }
       }
 
@@ -431,6 +445,8 @@
 
       const publicPortInput = document.getElementById('publicPort');
       const publicPortCheck = document.getElementById('publicPortCheck');
+      const protocolSelect = document.getElementById('publicPortProtocol');
+      const protocolRow = document.getElementById('protocolRow');
 
       if (data.publicPort) {
         publicPortInput.value = data.publicPort;
@@ -442,10 +458,14 @@
         publicPortCheck.checked = true;
         publicPortInput.disabled = false;
         publicPortInput.style.backgroundColor = "";
+        protocolRow.style.display = "table-row";
+        protocolSelect.value = data.protocol || "http";
       } else {
         publicPortCheck.checked = false;
         publicPortInput.disabled = true;
         publicPortInput.style.backgroundColor = "#e9e9e9";
+        protocolSelect.value = "http";
+        protocolRow.style.display = "none";
       }
     }
   }
@@ -470,8 +490,10 @@
       const totpKey = document.getElementById('totpKey').value.trim();
       const pubCheck = document.getElementById('publicPortCheck').checked;
       let publicPort = NaN;
+      let protocol = "http";
       if (pubCheck) {
         publicPort = parseInt(document.getElementById('publicPort').value, 10);
+        protocol = document.getElementById('publicPortProtocol').value;
       }
 
       if (!serviceName) {
@@ -483,12 +505,17 @@
         return;
       }
 
+      if (pubCheck && isNaN(publicPort)) {
+        alert("請輸入有效的 Public Port 或取消勾選！");
+        return;
+      }
+
       // 儲存到 localStorage
-      saveService(serviceName, srvip, knock, totpKey, publicPort, pubCheck);
+      saveService(serviceName, srvip, knock, totpKey, pubCheck ? publicPort : null, pubCheck);
       // 更新下拉選單
       refreshServiceSelect();
       // 敲門
-      knockPorts(srvip, knock, totpKey, publicPort, pubCheck);
+      knockPorts(srvip, knock, totpKey, pubCheck ? publicPort : null, pubCheck);
     });
 
     // 綁定「Delete Service」按鈕
