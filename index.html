@@ -362,9 +362,9 @@
         logElem.textContent += `\nChecking Public Port ${publicPort} with protocol ${protocol}...\n`;
         try {
           await timedFetch(`${protocol}://${ip}:${publicPort}`, { method: 'GET', mode: 'no-cors' }, 1000);
-          logElem.textContent += `Public Port ${publicPort} check open!\n`;
+          logElem.textContent += `Public Port ${publicPort} - request sent (no immediate error)\n`;
         } catch (err) {
-          logElem.textContent += `Public Port ${publicPort} check failed\n`;
+          logElem.textContent += `Public Port ${publicPort} check failed or timed out.\n`;
         }
       }
 
