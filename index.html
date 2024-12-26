@@ -159,7 +159,7 @@
     <table class="form-table">
       <tr>
         <td>
-          <label for="serviceName">Service:</label>
+          <label for="serviceName">Service Name:</label>
           <input type="text" id="serviceName" placeholder="e.g. MyTestService" />
         </td>
         <td>
@@ -169,7 +169,7 @@
       </tr>
       <tr>
         <td colspan="2">
-          <label>IP:</label>
+          <label>IP or Domain Name:</label>
           <input type="text" id="ip" placeholder="e.g. 10.3.14.20" />
         </td>
       </tr>
@@ -324,31 +324,34 @@
       const ports = [firstPort, knock2, knock3];
 
       // 3. 依序敲前 3 Port
-      logElem.textContent += "Starting knock for 1st/2nd/3rd ports...\n";
+      logElem.textContent += "Starting Port Knocking Sequence:\n";
       const defaultProtocol = 'https'; // 固定協議為 HTTPS
+      const ordinals = ['1st', '2nd', '3rd']; 
+      let i=0;
       for (let p of ports) {
-        logElem.textContent += `Knocking port ${p}...\n`;
+        const ordinal = ordinals[i] || `${i + 1}th`; // 適用於超出3個端口的情況
+        logElem.textContent += `Knocking on ${ordinal} port: ${p}\n`;
         try {
           await timedFetch(`${defaultProtocol}://${ip}:${p}`, { method: 'GET', mode: 'no-cors' }, 1000); // 增加超時時間
           //logElem.textContent += `Knocking port ${p} - request sent (no immediate error)\n`;
         } catch (error) {
           //logElem.textContent += `Knocking port ${p} failed or timed out.\n`;
         }
+        i++;
       }
 
       // 新增：檢查 publicport 和 protocol
       if (publicport === 443 && protocol.toLowerCase() === 'https') {
         logElem.textContent += `\nChecking HTTPS port ${publicport}...\n`;
         try {
-          const response = await timedFetch(`https://${ip}:${publicport}/`, { method: 'GET', mode: 'no-cors' }, 3000);
+          const response = await timedFetch(`https://${ip}:${publicport}/`, { method: 'GET', mode: 'no-cors' }, 500);
           // 如果 fetch 成功，不會拋出錯誤
           logElem.textContent += "HTTPS port open\n";
         } catch (error) {
           logElem.textContent += "HTTPS port open fail!\n";
         }
-
-        logElem.textContent += "\nPorts knocking successfully. Please check the server for confirmation.\n";
       }
+      logElem.textContent += "\nPorts knocking successfully.\nYou can now access the server.\n";
     } catch (err) {
       logElem.textContent += `TOTP calculation failed: ${err}\n`;
     }
