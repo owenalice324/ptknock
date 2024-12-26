@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>DrayTek PortKnockingTool V1.0</title>
+  <title>DrayTek_PortKnockingTool_V1.0</title>
   <!-- 引入 Google Fonts (Noto Sans TC) 讓整體字型更美觀 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,6 +10,8 @@
     href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" 
     rel="stylesheet"
   >
+  <!-- 引入 html5-qrcode 的 CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.css">
   <style>
     /* 全局設定 */
     * {
@@ -123,6 +125,51 @@
       color: #333;
     }
 
+    /* 新增：顯示當前 TOTP 驗證碼 */
+    #currentTotpCode {
+      margin-top: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* QR Code 掃描器模態框 */
+    .modal {
+      display: none; /* 隱藏模態框 */
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.5); /* 半透明背景 */
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      position: relative;
+    }
+    .close {
+      color: #aaa;
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+    }
+
     /* 手機或窄螢幕時 RWD 調整 */
     @media (max-width: 600px) {
       #container {
@@ -149,12 +196,16 @@
         width: 100%;
         margin: 5px 0;
       }
+      /* 調整模態框內容寬度 */
+      .modal-content {
+        width: 95%;
+      }
     }
   </style>
 </head>
 <body>
   <div id="container">
-    <h3>DrayTek PortKnockingTool V1.0</h3>
+    <h3>DrayTek_PortKnockingTool_V1.0</h3>
 
     <table class="form-table">
       <tr>
@@ -183,7 +234,12 @@
       <tr>
         <td colspan="2">
           <label>TOTP Key:</label>
-          <input type="text" id="totpKey" placeholder="e.g. JBSWY3DPEHPK3PXP" />
+          <div style="display: flex; align-items: center;">
+            <input type="text" id="totpKey" placeholder="e.g. JBSWY3DPEHPK3PXP" style="flex: 1;" />
+            <button id="scanQrBtn" style="margin-left: 10px; padding: 8px 12px; font-size: 14px;">掃描 QR Code</button>
+          </div>
+          <!-- 新增顯示當前 TOTP 驗證碼 -->
+          <div id="currentTotpCode">Current TOTP Code: --</div>
         </td>
       </tr>
       <!-- 新增協議選擇已移除 -->
@@ -197,6 +253,18 @@
     <pre id="log"></pre>
   </div>
 
+  <!-- QR Code 掃描器模態框 -->
+  <div id="qrModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closeModal">&times;</span>
+      <h4>掃描 QR Code</h4>
+      <div id="qr-reader" style="width: 100%;"></div>
+      <p id="qr-reader-status" style="margin-top: 10px; color: #555;">請將 QR Code 放入框內進行掃描。</p>
+    </div>
+  </div>
+
+  <!-- 引入 html5-qrcode 庫 -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
   <script>
   /**
    * -------------------------------------------------------------
@@ -264,6 +332,26 @@
 
   /**
    * -------------------------------------------------------------
+   * Part B: 實時顯示 TOTP 驗證碼
+   * -------------------------------------------------------------
+   */
+  async function updateTotpCode() {
+    const totpKey = document.getElementById('totpKey').value.trim();
+    const totpCodeElem = document.getElementById('currentTotpCode');
+    if (!totpKey) {
+      totpCodeElem.textContent = "Current TOTP Code: --";
+      return;
+    }
+    try {
+      const code = await generateTOTP(totpKey);
+      totpCodeElem.textContent = `Current TOTP Code: ${code}`;
+    } catch (err) {
+      totpCodeElem.textContent = `Invalid TOTP Key`;
+    }
+  }
+
+  /**
+   * -------------------------------------------------------------
    * Part C: fetch + no-cors + 人工 Timeout + 敲門流程
    * -------------------------------------------------------------
    * 說明：
@@ -304,7 +392,7 @@
       // 1. 先在前端自行計算 6 位數 TOTP
       const tokenStr = await generateTOTP(totpKey);
       const token = parseInt(tokenStr, 10);
-      logElem.textContent += `TOTP generated: ${tokenStr}\n`;
+      logElem.textContent += `TOTP generated (frontend): ${tokenStr}\n`;
 
       // 2. 計算 knock2, knock3
       const knock2 = 1000 + Math.floor(token / 1000);
@@ -324,7 +412,7 @@
         }
       }
 
-      logElem.textContent += "\nPorts knocking successfully. Please check the server for confirmation.\n";
+      logElem.textContent += "\nDone! Check server.\n";
     } catch (err) {
       logElem.textContent += `TOTP calculation failed: ${err}\n`;
     }
@@ -422,11 +510,11 @@
       const totpKey = document.getElementById('totpKey').value.trim();
 
       if (!serviceName) {
-        alert("Please enter the Service!");
+        alert("請輸入 Service!");
         return;
       }
       if (!srvip || isNaN(knock) || !totpKey) {
-        alert("Please ensure IP / 1st Port / TOTP Key are correctly filled!");
+        alert("請確定 IP / 1st Port / TOTP Key 均已填寫正確！");
         return;
       }
 
@@ -442,7 +530,7 @@
     document.getElementById('deleteBtn').addEventListener('click', () => {
       const serviceName = document.getElementById('serviceName').value.trim();
       if (!serviceName) {
-        alert("Please enter or select the Service to delete!");
+        alert("請輸入或選擇要刪除的 Service！");
         return;
       }
 
@@ -456,9 +544,102 @@
       document.getElementById('totpKey').value = "";
       // Knock Protocol 已移除
 
-      alert(`Service '${serviceName}' has been deleted.`);
+      alert(`Service '${serviceName}' 已刪除。`);
+    });
+
+    // 初始化並定期更新 TOTP 驗證碼
+    updateTotpCode(); // 初始調用一次
+    setInterval(updateTotpCode, 1000); // 每秒更新一次
+
+    // 綁定 QR Code 掃描按鈕
+    document.getElementById('scanQrBtn').addEventListener('click', () => {
+      openQrModal();
+    });
+
+    // 綁定關閉模態框按鈕
+    document.getElementById('closeModal').addEventListener('click', () => {
+      closeQrModal();
+    });
+
+    // 點擊模態框外部關閉
+    window.addEventListener('click', (event) => {
+      const modal = document.getElementById('qrModal');
+      if (event.target == modal) {
+        closeQrModal();
+      }
     });
   });
+
+  /**
+   * -------------------------------------------------------------
+   * Part F: QR Code 掃描功能
+   * -------------------------------------------------------------
+   */
+  let html5QrCode = null;
+
+  function openQrModal() {
+    const modal = document.getElementById('qrModal');
+    modal.style.display = "block";
+
+    // 初始化 html5-qrcode 掃描器
+    if (!html5QrCode) {
+      html5QrCode = new Html5Qrcode("qr-reader");
+    }
+
+    // 設定掃描器配置
+    const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+      console.log(`Decoded text: ${decodedText}`);
+      // 停止掃描器
+      html5QrCode.stop().then(ignore => {
+        // 清除掃描器
+        html5QrCode.clear();
+        // 將解碼結果載入到 totpKey 欄位
+        document.getElementById('totpKey').value = decodedText.trim();
+        // 更新 TOTP 驗證碼
+        updateTotpCode();
+        // 關閉模態框
+        closeQrModal();
+      }).catch(err => {
+        console.error("Failed to stop scanning.", err);
+      });
+    };
+
+    const config = { fps: 10, qrbox: 250 };
+
+    // 開始掃描
+    html5QrCode.start(
+      { facingMode: "environment" }, // 使用後置攝像頭
+      config,
+      qrCodeSuccessCallback
+    ).catch(err => {
+      console.error("Unable to start scanning.", err);
+      document.getElementById('qr-reader-status').textContent = "無法啟動掃描器。請確保已授予攝像頭權限並重新載入頁面。";
+    });
+  }
+
+  function closeQrModal() {
+    const modal = document.getElementById('qrModal');
+    modal.style.display = "none";
+
+    // 停止並清除掃描器
+    if (html5QrCode) {
+      html5QrCode.stop().then(ignore => {
+        html5QrCode.clear();
+      }).catch(err => {
+        console.error("Failed to stop scanning.", err);
+      });
+    }
+
+    // 重設狀態文字
+    document.getElementById('qr-reader-status').textContent = "請將 QR Code 放入框內進行掃描。";
+  }
+
+  /**
+   * -------------------------------------------------------------
+   * Part G: 實時更新 TOTP 驗證碼
+   * -------------------------------------------------------------
+   * 這部分已經在 Part B 實現
+   */
   </script>
 </body>
 </html>
