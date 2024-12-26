@@ -10,6 +10,8 @@
     href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" 
     rel="stylesheet"
   >
+  <!-- 引入 Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <!-- 引入 QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- 引入 html5-qrcode 庫 -->
@@ -269,13 +271,13 @@
     }
     #closeScannerBtn {
       margin-top: 10px;
-      padding: 14px 28px; /* 增大按鈕尺寸 */
+      padding: 12px 24px; /* 增大按鈕尺寸 */
       cursor: pointer;
       background-color: #ff4d4d;
       color: #fff;
       border: none;
       border-radius: 4px;
-      font-size: 18px;
+      font-size: 16px;
       transition: background-color 0.2s, transform 0.2s;
     }
     #closeScannerBtn:hover {
@@ -600,7 +602,7 @@
         text: otpauthUrl,
         width: 150,
         height: 150,
-        correctLevel: QRCode.CorrectLevel.Q // 從 H 調整為 Q，以降低 QR Code 密度
+        correctLevel: QRCode.CorrectLevel.L // 從 Q 調整為 L，以降低 QR Code 密度
       });
     }
   }
