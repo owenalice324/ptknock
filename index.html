@@ -241,18 +241,21 @@
       align-items: center;
     }
     #scanner {
-      width: 300px;
+      width: 500px; /* 增大掃描窗口尺寸 */
       max-width: 90%;
+      border: 2px solid #fff;
+      border-radius: 8px;
+      overflow: hidden;
     }
     #closeScannerBtn {
       margin-top: 10px;
-      padding: 8px 16px;
+      padding: 12px 24px; /* 增大按鈕尺寸 */
       cursor: pointer;
       background-color: #ff4d4d;
       color: #fff;
       border: none;
       border-radius: 4px;
-      font-size: 14px;
+      font-size: 16px;
       transition: background-color 0.2s, transform 0.2s;
     }
     #closeScannerBtn:hover {
@@ -316,7 +319,7 @@
         height: 100px;
       }
       #scanner {
-        width: 250px;
+        width: 300px; /* 縮小手機上的掃描窗口 */
       }
     }
   </style>
@@ -841,8 +844,7 @@
   let html5QrCode; // 全局變數以便於停止掃描
 
   function startScanner() {
-    const scanner = new Html5Qrcode("scanner");
-    const config = { fps: 10, qrbox: 250 };
+    const config = { fps: 10, qrbox: 500 }; // 調整 qrbox 大小以配合增大的掃描窗口
 
     // 開始掃描
     Html5Qrcode.getCameras().then(devices => {
@@ -851,7 +853,8 @@
         let cameraId = null;
         for (let device of devices) {
           // 嘗試根據標籤判斷後置攝像頭
-          if (device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')) {
+          const label = device.label.toLowerCase();
+          if (label.includes('back') || label.includes('rear') || label.includes('environment')) {
             cameraId = device.id;
             break;
           }
@@ -869,13 +872,25 @@
           qrCodeMessage => {
             // 成功掃描到 QR Code
             console.log(`QR Code detected: ${qrCodeMessage}`);
-            document.getElementById('totpKey').value = qrCodeMessage;
-            updateTotpCode();
-            startTotpTimer();
-            // 停止掃描並隱藏掃描介面
-            stopScanner();
-            document.getElementById('scannerContainer').style.display = 'none';
-            alert("TOTP Key 已成功掃描並載入！");
+            // 解析 QR Code 並提取 secret
+            try {
+              const url = new URL(qrCodeMessage);
+              const secret = url.searchParams.get('secret');
+              if (secret) {
+                document.getElementById('totpKey').value = secret;
+                updateTotpCode();
+                startTotpTimer();
+                // 停止掃描並隱藏掃描介面
+                stopScanner();
+                document.getElementById('scannerContainer').style.display = 'none';
+                alert("TOTP Key 已成功掃描並載入！");
+              } else {
+                alert("無法從 QR Code 中提取 secret。請確認 QR Code 正確。");
+              }
+            } catch (error) {
+              alert("掃描到的 QR Code 格式不正確。");
+              console.error('Error parsing QR Code:', error);
+            }
           },
           errorMessage => {
             // 掃描錯誤，可選擇忽略
