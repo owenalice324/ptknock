@@ -99,8 +99,8 @@
     }
     .totp-key-container button {
       flex: 0 0 auto;
-      padding: 12px 24px; /* 增大按鈕尺寸 */
-      font-size: 16px;
+      padding: 14px 28px; /* 增大按鈕尺寸 */
+      font-size: 18px;
       cursor: pointer;
       background-color: #007bff;
       color: #fff;
@@ -123,13 +123,13 @@
     }
     button:not(.totp-scan-btn) {
       margin: 5px 10px;
-      padding: 10px 20px;
+      padding: 12px 24px;
       cursor: pointer;
       background-color: #4caf50;
       color: #fff;
       border: none;
       border-radius: 4px;
-      font-size: 14px;
+      font-size: 16px;
       transition: background-color 0.2s, transform 0.2s;
     }
     button:not(.totp-scan-btn):hover {
@@ -172,7 +172,7 @@
       text-align: center; /* 置中 */
     }
     #copyTotpBtn {
-      padding: 8px 16px;
+      padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
       background-color: #007bff;
@@ -239,6 +239,8 @@
       z-index: 1000;
       justify-content: center;
       align-items: center;
+      flex-direction: column;
+      padding: 20px;
     }
     #scanner {
       width: 500px; /* 增大掃描窗口尺寸 */
@@ -246,6 +248,24 @@
       border: 2px solid #fff;
       border-radius: 8px;
       overflow: hidden;
+      position: relative;
+    }
+    /* 添加提示文字 */
+    #scannerOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 4px dashed #00FF00;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+    #scannerInstructions {
+      color: #fff;
+      margin-top: 20px;
+      font-size: 18px;
+      text-align: center;
     }
     #closeScannerBtn {
       margin-top: 10px;
@@ -320,6 +340,9 @@
       }
       #scanner {
         width: 300px; /* 縮小手機上的掃描窗口 */
+      }
+      #scannerInstructions {
+        font-size: 16px;
       }
     }
   </style>
@@ -406,7 +429,10 @@
   <!-- 新增：掃描介面 -->
   <div id="scannerContainer">
     <div>
-      <div id="scanner"></div>
+      <div id="scanner">
+        <div id="scannerOverlay"></div>
+      </div>
+      <div id="scannerInstructions">請將 QR Code 放置在框內以進行掃描</div>
       <button id="closeScannerBtn">Close Scanner</button>
     </div>
   </div>
@@ -574,7 +600,7 @@
         text: otpauthUrl,
         width: 150,
         height: 150,
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.Q // 從 H 調整為 Q，以降低 QR Code 密度
       });
     }
   }
@@ -844,7 +870,7 @@
   let html5QrCode; // 全局變數以便於停止掃描
 
   function startScanner() {
-    const config = { fps: 10, qrbox: 500 }; // 調整 qrbox 大小以配合增大的掃描窗口
+    const config = { fps: 15, qrbox: { width: 250, height: 250 } }; // 調整 fps 和 qrbox
 
     // 開始掃描
     Html5Qrcode.getCameras().then(devices => {
