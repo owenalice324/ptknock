@@ -99,7 +99,7 @@
     }
     .totp-key-container button {
       flex: 0 0 auto;
-      padding: 10px 20px;
+      padding: 12px 24px; /* 增大按鈕尺寸 */
       font-size: 16px;
       cursor: pointer;
       background-color: #007bff;
@@ -847,7 +847,21 @@
     // 開始掃描
     Html5Qrcode.getCameras().then(devices => {
       if (devices && devices.length) {
-        const cameraId = devices[0].id;
+        // 優先選擇後置攝像頭
+        let cameraId = null;
+        for (let device of devices) {
+          // 嘗試根據標籤判斷後置攝像頭
+          if (device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')) {
+            cameraId = device.id;
+            break;
+          }
+        }
+
+        // 如果沒有找到後置攝像頭，使用第一個可用的攝像頭
+        if (!cameraId) {
+          cameraId = devices[0].id;
+        }
+
         html5QrCode = new Html5Qrcode("scanner");
         html5QrCode.start(
           cameraId,
