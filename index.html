@@ -241,7 +241,7 @@
       align-items: center;
     }
     #scanner {
-      width: 500px; /* 增大掃描窗口尺寸 */
+      width: 600px; /* 增大掃描窗口尺寸 */
       max-width: 90%;
       border: 2px solid #fff;
       border-radius: 8px;
@@ -844,7 +844,7 @@
   let html5QrCode; // 全局變數以便於停止掃描
 
   function startScanner() {
-    const config = { fps: 10, qrbox: 500 }; // 調整 qrbox 大小以配合增大的掃描窗口
+    const config = { fps: 10, qrbox: 500, videoConstraints: { facingMode: "environment" } }; // 指定使用後置攝像頭
 
     // 開始掃描
     Html5Qrcode.getCameras().then(devices => {
@@ -860,14 +860,15 @@
           }
         }
 
-        // 如果沒有找到後置攝像頭，使用第一個可用的攝像頭
+        // 如果沒有找到後置攝像頭，使用 'environment' facingMode 來選擇
         if (!cameraId) {
-          cameraId = devices[0].id;
+          // 嘗試使用 constraints 來強制選擇後置攝像頭
+          cameraId = null; // 設置為 null 以使用 videoConstraints
         }
 
         html5QrCode = new Html5Qrcode("scanner");
         html5QrCode.start(
-          cameraId,
+          cameraId, // 如果 cameraId 為 null，將使用 videoConstraints
           config,
           qrCodeMessage => {
             // 成功掃描到 QR Code
