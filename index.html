@@ -328,6 +328,7 @@
       const defaultProtocol = 'https'; // 固定協議為 HTTPS
       const ordinals = ['1st', '2nd', '3rd']; 
       let i=0;
+      let y=0;
       for (let p of ports) {
         const ordinal = ordinals[i] || `${i + 1}th`; // 適用於超出3個端口的情況
         logElem.textContent += `Knocking on ${ordinal} port: ${p}\n`;
@@ -347,11 +348,17 @@
           const response = await timedFetch(`https://${ip}:${publicport}/`, { method: 'GET', mode: 'no-cors' }, 500);
           // 如果 fetch 成功，不會拋出錯誤
           logElem.textContent += "HTTPS port open\n";
+          y=0;
         } catch (error) {
           logElem.textContent += "HTTPS port open fail!\n";
+          y=1;
         }
       }
-      logElem.textContent += "\nPorts knocking successfully.\nYou can now access the server.\n";
+      if (y!=1)
+      {
+        logElem.textContent += "\nPorts knocking successfully.\nYou can now access the server. ";
+        logElem.innerHTML += `<a href="${protocol}://${ip}:${publicport}" target="_blank">${protocol}://${ip}:${publicport}</a>\n`;
+      }
     } catch (err) {
       logElem.textContent += `TOTP calculation failed: ${err}\n`;
     }
