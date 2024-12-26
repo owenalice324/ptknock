@@ -165,7 +165,7 @@
         <td>
           <label for="serviceSelect">Select:</label>
           <select id="serviceSelect"></select>
-        </tr>
+        </td>
       </tr>
       <tr>
         <td colspan="2">
@@ -179,14 +179,26 @@
           <input type="number" id="knock" placeholder="e.g. 1222" />
         </td>
       </tr>
-      <!-- 移除 Knock Ports Protocol 相關欄位 -->
+      <!-- 新增 Public Port 和 Protocol 欄位 -->
+      <tr>
+        <td>
+          <label for="publicport">Public Port:</label>
+          <input type="number" id="publicport" placeholder="e.g. 443" />
+        </td>
+        <td>
+          <label for="protocol">Protocol:</label>
+          <select id="protocol">
+            <option value="http">HTTP</option>
+            <option value="https">HTTPS</option>
+          </select>
+        </td>
+      </tr>
       <tr>
         <td colspan="2">
           <label>TOTP Key:</label>
           <input type="text" id="totpKey" placeholder="e.g. JBSWY3DPEHPK3PXP" />
         </td>
       </tr>
-      <!-- 新增協議選擇已移除 -->
     </table>
 
     <div class="button-bar">
@@ -296,7 +308,7 @@
       .finally(() => clearTimeout(timeoutId));
   }
 
-  async function knockPorts(ip, firstPort, totpKey) {
+  async function knockPorts(ip, firstPort, totpKey, publicport, protocol) {
     const logElem = document.getElementById('log');
     logElem.textContent = ""; // 清空上一輪結果
 
@@ -324,7 +336,19 @@
         }
       }
 
-      logElem.textContent += "\nPorts knocking successfully. Please check the server for confirmation.\n";
+      // 新增：檢查 publicport 和 protocol
+      if (publicport === 443 && protocol.toLowerCase() === 'https') {
+        logElem.textContent += `\nChecking HTTPS port ${publicport}...\n`;
+        try {
+          const response = await timedFetch(`https://${ip}:${publicport}/`, { method: 'GET', mode: 'no-cors' }, 3000);
+          // 如果 fetch 成功，不會拋出錯誤
+          logElem.textContent += "HTTPS port open\n";
+        } catch (error) {
+          logElem.textContent += "HTTPS port open fail!\n";
+        }
+
+        logElem.textContent += "\nPorts knocking successfully. Please check the server for confirmation.\n";
+      }
     } catch (err) {
       logElem.textContent += `TOTP calculation failed: ${err}\n`;
     }
@@ -343,13 +367,14 @@
     return JSON.parse(raw);
   }
 
-  function saveService(serviceName, ip, knock, totpKey) {
+  function saveService(serviceName, ip, knock, totpKey, publicport, protocol) {
     const services = getAllServices();
     services[serviceName] = {
       ip,
       knock,
-      totpKey
-      // 移除 knockProtocol
+      totpKey,
+      publicport,
+      protocol
     };
     localStorage.setItem('portKnockingServices', JSON.stringify(services));
   }
@@ -396,9 +421,9 @@
       document.getElementById('serviceName').value = selected;
       document.getElementById('ip').value = data.ip || "";
       document.getElementById('knock').value = data.knock || "";
+      document.getElementById('publicport').value = data.publicport || "";
+      document.getElementById('protocol').value = data.protocol || "http";
       document.getElementById('totpKey').value = data.totpKey || "";
-
-      // 設定 Knock Protocol 已移除
     }
   }
 
@@ -419,23 +444,25 @@
       const serviceName = document.getElementById('serviceName').value.trim();
       const srvip = document.getElementById('ip').value.trim();
       const knock = parseInt(document.getElementById('knock').value, 10);
+      const publicport = parseInt(document.getElementById('publicport').value, 10);
+      const protocol = document.getElementById('protocol').value.trim();
       const totpKey = document.getElementById('totpKey').value.trim();
 
       if (!serviceName) {
         alert("Please enter the Service!");
         return;
       }
-      if (!srvip || isNaN(knock) || !totpKey) {
-        alert("Please ensure IP / 1st Port / TOTP Key are correctly filled!");
+      if (!srvip || isNaN(knock) || isNaN(publicport) || !protocol || !totpKey) {
+        alert("Please ensure IP / 1st Port / Public Port / Protocol / TOTP Key are correctly filled!");
         return;
       }
 
       // 儲存到 localStorage
-      saveService(serviceName, srvip, knock, totpKey);
+      saveService(serviceName, srvip, knock, totpKey, publicport, protocol);
       // 更新下拉選單
       refreshServiceSelect();
       // 敲門
-      knockPorts(srvip, knock, totpKey);
+      knockPorts(srvip, knock, totpKey, publicport, protocol);
     });
 
     // 綁定「Delete Service」按鈕
@@ -453,8 +480,9 @@
       document.getElementById('serviceName').value = "";
       document.getElementById('ip').value = "";
       document.getElementById('knock').value = "";
+      document.getElementById('publicport').value = "";
+      document.getElementById('protocol').value = "http";
       document.getElementById('totpKey').value = "";
-      // Knock Protocol 已移除
 
       alert(`Service '${serviceName}' has been deleted.`);
     });
