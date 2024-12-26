@@ -397,7 +397,7 @@
           <!-- 使用 Flex 容器佈局 TOTP Key 輸入框和 Scan 按鈕 -->
           <div class="totp-key-container">
             <input type="text" id="totpKey" placeholder="e.g. JBSWY3DPEHPK3PXP" />
-            <button id="scanTotpBtn">Show QR</button>
+            <button id="scanTotpBtn" class="btn btn-primary">Scan QR</button>
           </div>
           <!-- 新增 QR Code 顯示 -->
           <div id="qrcodeContainer">
@@ -406,7 +406,7 @@
           <!-- 新增顯示當前 TOTP 驗證碼及複製按鈕 -->
           <div id="currentTotpContainer">
             <div id="currentTotpCode">--</div>
-            <button id="copyTotpBtn">Copy</button>
+            <button id="copyTotpBtn" class="btn btn-secondary">Copy</button>
           </div>
           <!-- 新增進度條及倒數字 -->
           <div id="totpProgressContainer">
@@ -421,11 +421,39 @@
     </table>
 
     <div class="button-bar">
-      <button id="knockBtn">Knock Ports</button>
-      <button id="deleteBtn">Delete Service</button>
+      <button id="knockBtn" class="btn btn-success">Knock Ports</button>
+      <button id="deleteBtn" class="btn btn-danger">Delete Service</button>
     </div>
 
     <div id="log"></div>
+  </div>
+
+  <!-- 新增：攝像頭選擇模態窗口 -->
+  <div class="modal fade" id="cameraSelectModal" tabindex="-1" aria-labelledby="cameraSelectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Select Camera</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="cameraSelectForm">
+            <div class="form-group">
+              <label for="cameraSelect">Choose a camera:</label>
+              <select class="form-control" id="cameraSelect" required>
+                <!-- 動態填充攝像頭選項 -->
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="startScanBtn" class="btn btn-primary">Start Scanning</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 新增：掃描介面 -->
@@ -435,9 +463,13 @@
         <div id="scannerOverlay"></div>
       </div>
       <div id="scannerInstructions">請將 QR Code 放置在框內以進行掃描</div>
-      <button id="closeScannerBtn">Close Scanner</button>
+      <button id="closeScannerBtn" class="btn btn-danger">Close Scanner</button>
     </div>
   </div>
+
+  <!-- 引入 jQuery 和 Bootstrap JS (需要放在body結尾) -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdQd6+I9YY6e5aVdKFVjCxHY+Yg7+Kp5rOkXey28oRHX7YsrXzm2Yt3FFQ7joI" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
   /**
@@ -847,10 +879,45 @@
     });
 
     // 綁定「掃描 QR Code」按鈕
-    document.getElementById('scanTotpBtn').addEventListener('click', () => {
+    document.getElementById('scanTotpBtn').addEventListener('click', async () => {
+      // 列出可用攝像頭並填充選項
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        const cameraSelect = document.getElementById('cameraSelect');
+        cameraSelect.innerHTML = ""; // 清空之前的選項
+
+        if (devices && devices.length) {
+          devices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.id;
+            option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+            cameraSelect.appendChild(option);
+          });
+          // 顯示模態窗口
+          $('#cameraSelectModal').modal('show');
+        } else {
+          alert("無可用的攝像頭！");
+        }
+      } catch (err) {
+        console.error(`Unable to access cameras, error: ${err}`);
+        alert("無法訪問攝像頭。請確認攝像頭可用並授予權限。");
+      }
+    });
+
+    // 綁定「開始掃描」按鈕
+    document.getElementById('startScanBtn').addEventListener('click', () => {
+      const selectedCameraId = document.getElementById('cameraSelect').value;
+      if (!selectedCameraId) {
+        alert("請選擇一個攝像頭！");
+        return;
+      }
+
+      // 關閉模態窗口
+      $('#cameraSelectModal').modal('hide');
+
       // 顯示掃描介面
       document.getElementById('scannerContainer').style.display = 'flex';
-      startScanner();
+      startScanner(selectedCameraId);
     });
 
     // 綁定「關閉掃描器」按鈕
@@ -869,82 +936,58 @@
    * Part H: QR Code 掃描功能實現
    * -------------------------------------------------------------
    */
-  let html5QrCode; // 全局變數以便於停止掃描
+  let html5QrCodeInstance; // 全局變數以便於停止掃描
 
-  function startScanner() {
+  function startScanner(cameraId) {
     const config = { fps: 15, qrbox: { width: 250, height: 250 } }; // 調整 fps 和 qrbox
 
     // 開始掃描
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices && devices.length) {
-        // 優先選擇後置攝像頭
-        let cameraId = null;
-        for (let device of devices) {
-          // 嘗試根據標籤判斷後置攝像頭
-          const label = device.label.toLowerCase();
-          if (label.includes('back') || label.includes('rear') || label.includes('environment')) {
-            cameraId = device.id;
-            break;
-          }
-        }
-
-        // 如果沒有找到後置攝像頭，使用第一個可用的攝像頭
-        if (!cameraId) {
-          cameraId = devices[0].id;
-        }
-
-        html5QrCode = new Html5Qrcode("scanner");
-        html5QrCode.start(
-          cameraId,
-          config,
-          qrCodeMessage => {
-            // 成功掃描到 QR Code
-            console.log(`QR Code detected: ${qrCodeMessage}`);
-            // 解析 QR Code 並提取 secret
-            try {
-              const url = new URL(qrCodeMessage);
-              const secret = url.searchParams.get('secret');
-              if (secret) {
-                document.getElementById('totpKey').value = secret;
-                updateTotpCode();
-                startTotpTimer();
-                // 停止掃描並隱藏掃描介面
-                stopScanner();
-                document.getElementById('scannerContainer').style.display = 'none';
-                alert("TOTP Key 已成功掃描並載入！");
-              } else {
-                alert("無法從 QR Code 中提取 secret。請確認 QR Code 正確。");
-              }
-            } catch (error) {
-              alert("掃描到的 QR Code 格式不正確。");
-              console.error('Error parsing QR Code:', error);
-            }
-          },
-          errorMessage => {
-            // 掃描錯誤，可選擇忽略
-            // console.log(`QR Code scan error: ${errorMessage}`);
-          }
-        ).catch(err => {
-          // 啟動掃描器失敗
-          console.error(`Unable to start scanning, error: ${err}`);
-          alert("無法啟動掃描器。請確認攝像頭可用並授予權限。");
-          document.getElementById('scannerContainer').style.display = 'none';
-        });
-      } else {
-        alert("無可用的攝像頭！");
-        document.getElementById('scannerContainer').style.display = 'none';
-      }
-    }).catch(err => {
-      console.error(`Unable to access cameras, error: ${err}`);
-      alert("無法訪問攝像頭。請確認攝像頭可用並授予權限。");
+    html5QrCodeInstance = new Html5Qrcode("scanner");
+    html5QrCodeInstance.start(
+      cameraId,
+      config,
+      qrCodeSuccessCallback,
+      qrCodeErrorCallback
+    ).catch(err => {
+      // 啟動掃描器失敗
+      console.error(`Unable to start scanning, error: ${err}`);
+      alert("無法啟動掃描器。請確認攝像頭可用並授予權限。");
       document.getElementById('scannerContainer').style.display = 'none';
     });
   }
 
+  function qrCodeSuccessCallback(decodedText, decodedResult) {
+    console.log(`QR Code detected: ${decodedText}`);
+    // 解析 QR Code 並提取 secret
+    try {
+      const url = new URL(decodedText);
+      const secret = url.searchParams.get('secret');
+      if (secret) {
+        document.getElementById('totpKey').value = secret;
+        updateTotpCode();
+        startTotpTimer();
+        // 停止掃描並隱藏掃描介面
+        stopScanner();
+        document.getElementById('scannerContainer').style.display = 'none';
+        alert("TOTP Key 已成功掃描並載入！");
+      } else {
+        alert("無法從 QR Code 中提取 secret。請確認 QR Code 正確。");
+      }
+    } catch (error) {
+      alert("掃描到的 QR Code 格式不正確。");
+      console.error('Error parsing QR Code:', error);
+    }
+  }
+
+  function qrCodeErrorCallback(errorMessage) {
+    // 掃描錯誤，可選擇忽略或顯示提示
+    // console.log(`QR Code scan error: ${errorMessage}`);
+  }
+
   function stopScanner() {
-    if (html5QrCode) {
-      html5QrCode.stop().then(ignore => {
-        html5QrCode.clear();
+    if (html5QrCodeInstance) {
+      html5QrCodeInstance.stop().then(ignore => {
+        html5QrCodeInstance.clear();
       }).catch(err => {
         console.error(`Unable to stop scanning, error: ${err}`);
       });
