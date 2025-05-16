@@ -1,1 +1,27 @@
+<!-- redirect.html -->
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>接收參數</title></head>
+<body>
+  <h1>正在處理參數...</h1>
 
+  <script>
+    // 取得參數
+    const name = sessionStorage.getItem('name');
+    const ip = sessionStorage.getItem('ip');
+    const port = sessionStorage.getItem('1stport');
+    const totpkey = sessionStorage.getItem('totpkey');
+
+    // 顯示或用於後續處理
+    document.body.innerHTML = `
+      <h2>已接收參數：</h2>
+      <ul>
+        <li>Name: ${name}</li>
+        <li>IP: ${ip}</li>
+        <li>Port: ${port}</li>
+        <li>TOTP Key: ${totpkey}</li>
+      </ul>
+    `;
+  </script>
+</body>
+</html>
